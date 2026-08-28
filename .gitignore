@@ -1,0 +1,16 @@
+CLAUDE.md
+
+# data — re-fetch with `make data` (see README); never committed (PLAN §2.1)
+data/
+
+# generated artifacts
+results/
+figures/
+*.parquet
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
