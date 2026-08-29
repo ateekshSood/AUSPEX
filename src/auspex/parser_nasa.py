@@ -58,6 +58,29 @@ def write_parquet(kept_rows , output_path):
     
     df.to_parquet(output_path , index=False)
 
+def make_dir_fetch_details_write_parquet(name : str):
+    parent_path = Path(__file__).resolve().parents[2] / "data"
+    output_path = parent_path / "processed/"
+
+    output_path.mkdir(exist_ok=True , parents=True)
+    
+    combined_data_path_string = "raw/NASA_access_log_" + name + ".gz"
+    comobined_file_path_string = "NASA_access_log_" + name + ".parquet" 
+    
+    data_path = parent_path / combined_data_path_string
+    file_path = output_path / comobined_file_path_string
+
+    
+    response = parse_file(data_path)
+    
+    kept_rows , malformed , dropped , kept , total = response["kept_rows"] , response["malformed"] , response["dropped"] , response["kept"] , response["total"]
+
+    assert malformed + dropped + kept == total
+    
+    if malformed/total > 0.001:
+        print("WARNING MALFORMED IS TOO MUCH YOUR REGEX IS WRONG" , file=sys.stderr)
+    print(f"Malformed :  {malformed}  | dropped :  {dropped}  | kept : {kept}  | total :  {total}") 
+    write_parquet(kept_rows , file_path)
 
 
 
@@ -70,52 +93,15 @@ def main():
     if not args.j and not args.a:
         ap.print_help()
         return 
+
     
-
-    parent_path = Path(__file__).resolve().parents[2] / "data"
-
     if args.a:
 
-        data_path = parent_path / "raw/NASA_access_log_Aug95.gz"
-        output_path = parent_path / "processed/"
-        
-        output_path.mkdir(exist_ok=True , parents=True)
-        
-        file_path = output_path / "NASA_access_log_Aug95.parquet"
-
-        response = parse_file(data_path)
-        
-        kept_rows , malformed , dropped , kept , total = response["kept_rows"] , response["malformed"] , response["dropped"] , response["kept"] , response["total"]
-
-        assert malformed + dropped + kept == total
-        
-        if malformed/total > 0.001:
-            print("WARNING MALFORMED IS TOO MUCH YOUR REGEX IS WRONG" , file=sys.stderr)
-        print("Malformed : ", malformed , " | dropped : ", dropped , " | kept :", kept , "| total : " , total) 
-        write_parquet(kept_rows , file_path)
+        make_dir_fetch_details_write_parquet("Aug95")
 
     if args.j:
         
-
-        data_path = parent_path / "raw/NASA_access_log_Jul95.gz"
-        output_path = parent_path / "processed/"
-        
-        output_path.mkdir(exist_ok=True , parents=True)
-        
-        file_path = output_path / "NASA_access_log_Jul95.parquet"
-
-        response = parse_file(data_path)
-        
-        kept_rows , malformed , dropped , kept , total = response["kept_rows"] , response["malformed"] , response["dropped"] , response["kept"] , response["total"]
-
-        assert malformed + dropped + kept == total
-
-        if malformed/total > 0.001:
-            print("WARNING MALFORMED IS TOO MUCH YOUR REGEX IS WRONG" , file=sys.stderr)
-
-        print("Malformed : ", malformed , " | dropped : ", dropped , " | kept :", kept , "| total : " , total) 
-        
-        write_parquet(kept_rows , file_path)
+        make_dir_fetch_details_write_parquet("Jul95")
 
 if __name__ == "__main__":
     main()
