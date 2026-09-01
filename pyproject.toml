@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "ipykernel>=7.3.0",
     "matplotlib>=3.11.1",
     "numpy>=2.5.2",
     "pandas>=3.0.5",
@@ -22,3 +23,8 @@ build-backend="hatchling.build"
 #just to tell which code to be made into package
 [tool.hatch.build.targets.wheel]
 packages = ["src/auspex"]
+
+[dependency-groups]
+dev = [
+    "pandas-stubs>=3.0.5.260730",
+]
