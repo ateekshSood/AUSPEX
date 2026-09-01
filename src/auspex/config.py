@@ -26,4 +26,10 @@ class Cfg:
     # this var simply tells how many requests will be used to fill it
     # say we are sending 100 requests then first 20 will be used to fil the cache 
     warmup_frac : float = 0.20
+
+    # the max variation the session gap can have before they will be classified as bots 
+    bot_cv_threshold : float = 0.1
+
+    #how many min requests before bot will be flagged
+    bot_cv_min_request : int = 100
     
