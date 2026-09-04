@@ -1,14 +1,12 @@
 CLAUDE.md
 
-# data — re-fetch with `make data` (see README); never committed (PLAN §2.1)
-data/
 
-# generated artifacts
-results/
-figures/
+data/
 *.parquet
 
-# python
 .venv/
 __pycache__/
 .pytest_cache/
+
+# scratch: stage-gate explain-back answers
+questions.txt
