@@ -90,6 +90,7 @@ def get_stats(name : str):
     ax[1].set_title(f"{frac_zero_gap:.1%} of gaps are 0 s")
     ax[1].set_xlabel("Inter request gap sec (log scale)")
     ax[1].set_ylabel("number of transitions (log)")
+    ax[1].grid()
 
     save_path_parent = Path(__file__).resolve().parent.parent.parent
     save_file = "results/" + name + ".png"
@@ -159,7 +160,10 @@ def main():
     }
 
     out = repo_root / "results" / "stage0_summary.json"
-    out.write_text(json.dumps(payload, indent=2))
+
+    text = json.dumps(payload, indent=2)
+    print(text)                 
+    out.write_text(text)
             
 
 
