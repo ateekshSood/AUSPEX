@@ -814,3 +814,47 @@ numbers are the half that gates Stage 1. Plots go in with the §3.4 write-up.
 `.mean()` on the mask is the one legitimate use (fraction True). Corrected
 shape: the three fractions are per-threshold (1 s / 2 s / 5 s); p50/p90/p99 are
 distribution-wide and computed **once** on `gap_without_na` itself.
+
+**D042 — §3.4 item 4 (the go/no-go) is answered: prefetching has time to work.**
+First run through the JSON writer (`results/stage0_summary.json`, both months,
+4.3 s). July: **87.6% of the 1,513,605 in-session transitions have a gap ≥ 1 s**
+(≥2 s: 75.4%, ≥5 s: 57.3%), and only **12.4% are 0 s**. August agrees closely
+(84.2% / 69.7% / 50.6%, 15.8% zero). Gap p50/p90/p99 = 7 / 106 / 881 s (July).
+So the *asynchronous* half of the claim survives: a ~200 ms prefetch has room
+on roughly seven transitions in eight, and the fallback framing sketched in
+D038 (drop to "hit rate only") is **not** needed. Sessions: July 157,930,
+p50 6, p90 22, max 483; singletons 11.0% of sessions but only 1.04% of
+requests — they stay in the replay (§3.3) and cost the model almost nothing.
+Recorded here because these gate Stage 1; they are now reproducible from
+`make stats` rather than living in chat (hard rule 7).
+
+**D043 — the sessionizer cuts on `gap > session_gap_s`, not `>=`.** Measured
+max in-session gap on July is exactly **1800.0**, so a gap of precisely 30 min
+stays *inside* a session. Consistent with `config.py`'s comment ("gap more than
+30 min ... will end it"), and the effect is one boundary transition, but it is
+now written down: the in-session gap range is **0 … 1800 inclusive**, and any
+downstream binning that assumes `< 1800` (e.g. a top bin edge of 1799) would
+silently drop the boundary rows.
+
+**D044 — Makefile written; `uv` replaces §2.3's pip lines, and `pyproject.toml`
++ `uv.lock` stand in for §2.2's `requirements.txt` + `requirements.lock`.**
+Four Stage-0 targets (`setup data stats test`); the rest arrive with their
+stages. `setup` is `uv sync --locked` — one command replaces both
+`pip install -r requirements.txt` and `pip install -e .`, since uv installs the
+project itself editable from the `[build-system]` block (which is what makes
+`python -m auspex.*` resolve, D017). `--locked` fails loudly if `uv.lock` has
+drifted from `pyproject.toml` rather than silently re-resolving to newer
+versions — the right default for a project whose claim is that every number
+traces to an exact environment. Every recipe is prefixed `uv run` so the
+targets work without the caller having activated `.venv`. §2.2's intent is met
+under uv's filenames, both committed; no `requirements.txt` will be created.
+Three traps hit and fixed while writing it, recorded because they are silent:
+(1) an empty `.PHONY:` let `make data` match the existing `data/` **directory**
+and report "up to date" having run nothing, exit 0; (2) `cd` does not persist
+between recipe lines (each is its own shell); (3) invoking `stats.py` as a file
+instead of `python -m auspex.stats` breaks the package-relative call form D022
+settled on.
+**Verified from nothing, not from a warm tree:** parquet moved aside, then
+`make data` (49.6 s) → `make data` again (exit 0, idempotent) → `make stats`,
+and the regenerated `months` block is **identical** to the pre-rebuild run.
+`make test` 49 passed.
