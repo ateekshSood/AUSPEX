@@ -662,3 +662,155 @@ Notable during the build, worth keeping for the stage gate:
 six columns and omits it; decide by reading what the latency model needs), the
 D030/D032 code comments marking rules 1 and 3 as structural zeros, and an
 August run.
+
+---
+
+**D035 — Appendix C test 11 (`tests/test_sessionize.py`) written, 2026-09-02, by
+Claude, after Ateeksh's implementation (hard rule 8 / D015).** Asked and
+approved first, per the ask-first rule. 29 tests, all green; full suite 49
+green. Derived from PLAN §3.3's six numbered steps and Appendix C's one-line
+brief ("gap>30 min splits; length-1 sessions *retained* in output; same-second
+order stable via `(ts, seq)`") — not from reading the implementation back.
+Structure: pure-function tests on synthetic frames for steps 1–5, plus
+artifact-level tests that load the real cleaned parquets (skipped when `make
+data` has not run) for step 6, because `write()` derives its own output path
+from `__file__` and cannot be pointed at `tmp_path` without an output-dir
+parameter. What is pinned, beyond the obvious:
+- **Both threshold boundaries are strict-greater-than**, as §3.3 words them: a
+  gap of exactly `session_gap_s` must *not* split, and a session of exactly
+  `bot_max_session_len` must *not* be dropped.
+- **`bot_cv_min_request` is a sample-size gate**: a constant-cadence host with
+  99 requests survives; the same host with 100 is dropped (D032).
+- **The sort-2 regression test** — the written file is non-decreasing in
+  `(ts, seq)` and `seq` is unique, so the order is total. This is the test that
+  would have caught the `write()` bug from D034.
+- **The bot rules are filters, not re-labellers**: survivors come out with the
+  same `session_id` and `pos_in_session` they went in with, and the three
+  printed drop counts sum exactly to rows removed (D029).
+- **Singleton retention** is asserted twice — once in labelling, once at the
+  artifact level — so a future "cleanup" that drops them from the replay
+  workload fails loudly (§3.3 step 4, test 23's precursor).
+
+**D036 — one test failed on the first run, and the test was wrong, not the
+code.** `test_host_change_always_splits_even_at_the_same_timestamp` asserted
+that `alice(t=1000), bob(t=1000), alice(t=1001)` yields three sessions — i.e.
+that bob's interleaved request cuts alice's session. It yields two, and two is
+correct: sessionization runs in **sort-1 space `(host, ts, seq)`**, where
+alice's two rows are adjacent and one second apart. A session is a contiguous
+run *within a host*, so nothing another host does can split it; the chronology
+that has them interleaved is sort 2, which is applied afterwards, at write
+time. Renamed to `test_a_different_host_never_shares_a_session` and inverted.
+Worth keeping because it is the sharpest statement of why §3.3 needs two
+different sorts: **sort 1 defines sessions, sort 2 defines replay order**, and
+reasoning about one in the other's frame is exactly how the v1.1 bug happened.
+
+**Still open on `sessionize.py`:** only the `size` column. It is emitted by
+`parser_nasa.py` (D023: PLAN §3.2 pins `size` in the parser output for the
+Stage 7 byte-capacity variant) and `sessionize.py` merely carries it through,
+so the cleaned file has seven columns where §3.3 lists six. The D030/D032
+structural-zero comments are in the code, and August is built
+(`NASA_access_log_cleaned_Aug95.parquet`, 1,392,741 rows) — both previously
+logged as open, both closed.
+
+**D037 — the `size` column stays in the sessionizer output; the file is seven
+columns, not §3.3's six.** Decision: Ateeksh, 2026-09-02. PLAN §3.3 step 6
+names six columns (`ts, seq, host, url, session_id, pos_in_session`);
+`sessionize.py` writes seven, because `size` is created by `parser_nasa.py`
+(§3.2 requires it there) and nothing in the sessionizer drops a column — it
+rides through `load` → `write` untouched. **Alternative considered:** drop it
+to match §3.3 exactly and re-join it from the parser parquet on `seq` when
+Stage 7 needs it — `seq` is preserved forever precisely so joins like that
+work. **Why keep it:** the byte-capacity sensitivity run (§7, §10 item 2) is a
+real planned consumer — the PLAN says the `size` column exists "for exactly
+this" — and carrying one int32 column costs nothing next to writing and
+maintaining a join. Scoped honestly: `size` is used by the **Stage 7
+byte-capacity variant only**. The §6.4 latency model does **not** use it (it
+draws latency from common random numbers keyed on request index, not object
+size), so nothing before Stage 7 reads this column. The replay loop must
+ignore it. §3.3's six-column list is therefore a *minimum*, not an exact
+schema; noted here rather than edited into PLAN.md (cf. Q001).
+
+---
+
+**D038 — `stats.py` (§3.4) in progress, 2026-09-02/03, written by Ateeksh.**
+Built in the order §3.4 lists, except that the **in-session gap block was
+pulled to the front deliberately**: the fraction of gaps ≥1 s is the go/no-go
+number for the whole project (a prefetch cannot land inside a 0-second gap), so
+it is measured before anything downstream is built. Ateeksh pushed back on
+§3.4 as "just for show"; the answer that landed was that item 4 is a cheap
+experiment that de-risks Stages 1–6, and that the PNGs and top-20 URLs are the
+genuinely presentational parts. Done so far: totals, unique URLs/hosts, session
+count, session-length p50/p90/max, both singleton shares, the gap Series with
+its count assertion, the three gap fractions, top-20 URLs. Not yet done: gap
+p50/p90/p99, both histograms, and the JSON writer.
+- **Singleton sessions vs singleton requests share the same numerator** — a
+  singleton session contains exactly one request — and differ only in the
+  denominator (sessions vs requests). His code and comment get this right.
+- **`groupby("session_id")["ts"].diff()` needs no pre-sort**, because the
+  cleaned file is globally `(ts, seq)`-sorted and pandas preserves row order
+  within a group. Guarded by `len(gaps.dropna()) == len(df) - num_sessions`,
+  which passes on July. Sort 2 paying rent (D034).
+- **Three thresholds, not one, because backend latency `x` is a knob and not a
+  fact.** The trace contains `g` only; `x` does not exist until §6.4. So the
+  thresholds 1/2/5 s *are* candidate values of `x`, and the spread between the
+  three fractions says whether the opportunity is robust or fragile to a slower
+  backend. Second reason: at 1-second timestamp resolution a recorded gap of 1
+  means a true gap anywhere in (0, 2) s, so higher thresholds also buy
+  confidence against clock quantization. Since `ts` is integer seconds,
+  "fraction of gaps ≥ 1 s" is exactly "fraction of consecutive in-session
+  requests **not** in the same second".
+- **A 0-second gap is not an unpredictable request.** It kills the
+  *asynchronous* claim (no wall-clock room to hide a fetch), not the
+  *predictive* one. If July's gaps turn out to be mostly 0, the project's claim
+  moves from "lower latency" to "higher hit rate via segmented residency"
+  (§6.4 `prefetch_frac`) — same model, different headline. Deciding this
+  **before** Stage 1 is the reason §3.4 comes first.
+
+**D039 — matplotlib's default binning is unusable on this data; bins must be
+chosen explicitly.** Measured on July: 157,930 sessions, shortest 1 request,
+longest **483** (under the 500 cap, so `bot_max_session_len` is not binding on
+the max). `plt.hist` defaults to 10 equal-width bins, i.e. ~48 units wide over
+1–483, which puts **154,976 of 157,930 sessions (98%) in the first bar**.
+Two independent problems, and `log=True` only fixes one:
+(1) *heights* span 154,976 → 6, fixed by the log **y**-axis §3.4 asks for;
+(2) *bin placement* lumps lengths 1–49 together, which log-y does nothing
+about — and the 1-vs-2-vs-3 distinction is exactly the one that matters, since
+a singleton yields 0 transition pairs and a length-3 session yields 2.
+Fix is explicit `bins=` edges: integer bins over a truncated low range, or
+`np.logspace` bins with both axes log. Choice still open.
+**Also open on this file:** the gap histogram needs log-**x**, but gaps include
+0 and `log(0)` is undefined — a bare `xscale("log")` drops the zero bar
+*silently*, hiding the single most important value in the dataset. Plot gaps
+≥ 1 and print the zero count separately (preferred), or plot `gap + 1` and
+relabel. And `main` can call `get_stats` twice (`-j -a`); with bare `plt.hist`
+and no `plt.close()`, August would draw on top of July.
+**Open decision:** §3.4 names one `results/stage0_summary.json` but the CLI is
+per-month — one file per month, or one file keyed by month? `results/` does not
+exist yet and must be created idempotently for `make stats`. Note that none of
+the numbers in this entry have been through the JSON writer yet (hard rule 7);
+they are diagnostic until `stage0_summary.json` exists.
+
+**D040 — bin choices settled; the two PNGs deferred to the end of Stage 0.**
+Plot 1 (session lengths): `np.arange(1, 52)` — one bar per integer length, so
+1 / 2 / 3 stay distinguishable (0 / 1 / 2 transition pairs), tail truncated and
+said so in the label. Plot 2 (gaps): zero is pulled *out* of the histogram and
+reported as a number in the title (`frac_gap_zero`), and the positive gaps get
+multiplicatively-growing bins over 1 → `session_gap_s`, drawn with
+`set_xscale("log")`. Rejected: hand-picked edges like
+`[0,1,2,3,5,10,30,60,300,1800]` — a bare histogram plots raw **counts**, so
+unequal bin widths make bar heights non-comparable (a 1500 s bin out-collects a
+1 s bin for reasons that have nothing to do with the data). `np.geomspace(1,
+session_gap_s, 30)` is preferred over `np.logspace`, which takes **exponents**
+rather than endpoints and had already produced a silently blank plot
+(`logspace(1, 1800, 30)` → bins running to 10**1800).
+*Deferred, not dropped:* the figures are the decorative half of §3.4; the
+numbers are the half that gates Stage 1. Plots go in with the §3.4 write-up.
+**Stage 0 cannot be checked off until both PNGs exist** — §3.4 asks for them.
+
+**D041 — gap percentiles must come from the gaps, not from a boolean mask.**
+`calculate_stats` computed `(gap >= t).median()` / `.quantile(.9)` / `.quantile(.99)`.
+`(gap >= t)` is a Series of True/False, so those percentiles describe the
+*mask*, not the gap distribution — they can only ever return 0.0 or 1.0.
+`.mean()` on the mask is the one legitimate use (fraction True). Corrected
+shape: the three fractions are per-threshold (1 s / 2 s / 5 s); p50/p90/p99 are
+distribution-wide and computed **once** on `gap_without_na` itself.
