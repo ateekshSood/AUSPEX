@@ -1,10 +1,10 @@
 import argparse
-
-from pathlib import Path
-import json 
-import subprocess 
-from datetime import datetime , timezone 
+import json
+import subprocess
 from dataclasses import asdict
+from datetime import UTC, datetime
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -114,7 +114,7 @@ def get_stats(name : str):
             "singleton_requests": int(singleton_request_num),
             "singleton_requests_share": float(singleton_requests_share),
     
-            "num_transitions": int(len(gap_without_na)),
+            "num_transitions": len(gap_without_na),
             "gap_p50": float(gap_p50),
             "gap_p90": float(gap_p90),
             "gap_p99": float(gap_p99),
@@ -154,7 +154,7 @@ def main():
     payload = {
         "git_sha": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=repo_root, text=True).strip(),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "cfg": asdict(Cfg()),
         "months": months,          
     }

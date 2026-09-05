@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 # python decorator dataclass as it will write the __init__ stuff on its own and i dont have to write it 
 # without it i would have to write it 
 # forzen = True is essentailly like public final in java
