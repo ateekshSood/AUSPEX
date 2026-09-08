@@ -12,8 +12,7 @@ import gzip
 import pandas as pd
 import pytest
 
-from auspex.parser_nasa import parse_line, parse_file, write_parquet
-
+from auspex.parser_nasa import parse_file, parse_line, write_parquet
 
 # --- the fixture -----------------------------------------------------------
 #
