@@ -3,15 +3,14 @@
 Asynchronous predictive prefetching over an LRU-managed cache, evaluated against
 standard policies by trace replay on real request logs.
 
-Status: **Stage 0 (data)**. See `spec/PLAN.md` for the full plan and
-`decisions.md` for the running decision log.
+## CHECK DECISIONS.MD FOR PROJECT PROGRESS
 
 ## Data
 
 The NASA-HTTP 1995 traces are **not committed to this repo** — they are 37 MB of
 public archive data that anyone can re-fetch. Download them into `data/raw/`:
 
-```bash
+```commands to download dataset: 
 mkdir -p data/raw && cd data/raw
 curl -O https://ita.ee.lbl.gov/traces/NASA_access_log_Jul95.gz
 curl -O https://ita.ee.lbl.gov/traces/NASA_access_log_Aug95.gz
@@ -22,14 +21,6 @@ at Lawrence Berkeley National Laboratory — the canonical origin of this datase
 
 Verify what you downloaded:
 
-| file | bytes | sha256 |
-|---|---|---|
-| `NASA_access_log_Jul95.gz` | 20,676,672 | `199109ed0f273e095da6ccd5fc9dc4cd8bb58daa06d62135e62090fea9d27488` |
-| `NASA_access_log_Aug95.gz` | 16,633,316 | `14995aed0ba4558ab832613ebea9a3ef2d87cb4297fc67f5694e0032bbb6b788` |
-
-```bash
-sha256sum data/raw/*.gz
-```
 
 ### Known quirks of these files
 
