@@ -5,6 +5,15 @@ standard policies by trace replay on real request logs.
 
 ## CHECK DECISIONS.MD FOR PROJECT PROGRESS
 
+## RUN TO REACH CURRENT PROGRESS
+
+```in terminal
+make setup 
+make data
+make stats
+make test
+```
+
 ## Data
 
 The NASA-HTTP 1995 traces are **not committed to this repo** — they are 37 MB of
