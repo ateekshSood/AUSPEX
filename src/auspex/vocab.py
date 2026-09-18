@@ -11,7 +11,10 @@ def get_parquet(name : str) -> pd.DataFrame:
     path = parent_path / file_name
     df = pd.read_parquet(path) 
 
-    assert ((np.diff(df["ts"].to_numpy())) > 0 | (np.diff(df["seq"].to_numpy()))).all() > 0 , "The parquet is not sorted by (ts,seq) sort it..."
+    ts_check = np.diff(df["ts"].to_numpy()) > 0
+    seq_check = np.diff(df["seq"].to_numpy()) > 0
+    
+    assert (ts_check | seq_check).all() , "The parquet is not sorted by (ts,seq) sort it..."
     
     return df
 
