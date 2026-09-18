@@ -4,14 +4,17 @@ import numpy as np
 import pandas as pd
 
 
-def get_parquet(name : str) -> tuple[pd.DataFrame , str]:
+def get_parquet(name : str) -> tuple[pd.Series , str]:
 
     parent_path = Path(__file__).resolve().parents[2] /"data/processed" 
     file_name = "NASA_access_log_cleaned_" + name +".parquet"
     path = parent_path / file_name
-    df = pd.read_parquet(path)
+    df = pd.read_parquet(path) #only load the url column
 
-    return (df , file_name)
+    assert df["ts"].is_monotonic_decreasing , "The parquet is not sorted by (ts, seq) sort it..."
+    
+
+    return (df["url"] , file_name)
 
 def set_int() -> None:
     
@@ -23,7 +26,7 @@ def set_int() -> None:
     #returns id based order 0...1..1..1..2. so on based on first occursace 
     # can also use sort=True wiht it , retursn tuple of numpy arr of the id and 
     # the unique values as well
-    df_concat["url_id"] , unique_url = pd.factorize(df_concat["url"]) 
+    _ , unique_url = pd.factorize(df_concat["url"]) 
     df_url_id = pd.DataFrame({"url" : unique_url , "url_id" : np.arange(len(unique_url))})
 
     write_parquet(df_url_id)
