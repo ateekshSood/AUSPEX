@@ -4,22 +4,21 @@ import numpy as np
 import pandas as pd
 
 
-def get_parquet(name : str) -> tuple[pd.Series , str]:
+def get_parquet(name : str) -> pd.DataFrame:
 
     parent_path = Path(__file__).resolve().parents[2] /"data/processed" 
     file_name = "NASA_access_log_cleaned_" + name +".parquet"
     path = parent_path / file_name
-    df = pd.read_parquet(path) #only load the url column
+    df = pd.read_parquet(path) 
 
-    assert df["ts"].is_monotonic_decreasing , "The parquet is not sorted by (ts, seq) sort it..."
+    assert ((np.diff(df["ts"].to_numpy())) > 0 | (np.diff(df["seq"].to_numpy()))).all() > 0 , "The parquet is not sorted by (ts,seq) sort it..."
     
-
-    return (df["url"] , file_name)
+    return df
 
 def set_int() -> None:
     
-    df_aug , _ = get_parquet("Aug95")
-    df_jul , _ = get_parquet("Jul95")
+    df_aug = get_parquet("Aug95")
+    df_jul = get_parquet("Jul95")
 
     df_concat = pd.concat([df_jul , df_aug] , ignore_index=True)
 
