@@ -858,3 +858,38 @@ settled on.
 `make data` (49.6 s) → `make data` again (exit 0, idempotent) → `make stats`,
 and the regenerated `months` block is **identical** to the pre-rebuild run.
 `make test` 49 passed.
+
+---
+
+## Session 9 — 2026-09-17 · Stage 1 (Harness + LRU) begins
+
+Stage 0 explain-back (`questions.txt`) still unanswered; Q1/Q3 (the two sorts)
+are being taught in place as the replay loop is built, per the resume plan.
+
+**D045 — `vocab.py`: one shared vocab for Jul+Aug, ids by first appearance.**
+Written by Ateeksh. July and August cleaned parquets are concatenated
+July-first and numbered with `pd.factorize` (first-appearance order), saved as
+`data/processed/vocab.parquet` — two columns `url`, `url_id`, one row per
+distinct URL. *Alternatives:* alphabetical ids (equally deterministic; Ateeksh's
+first reason for rejecting it — "sorting is slower" — was measured false: sorting
+the ~9k distinct strings takes 0.004 s); one vocab per month (rejected: P3 trains
+on July and counts August, so a URL must carry the same id in both).
+*Why first-appearance:* both inputs are already `(ts, seq)`-ordered and every July
+ts precedes every August ts, so ids 0–7206 are exactly the July URLs and ids
+≥ 7207 are the 2,141 August-only ones — "never seen in training" is readable off
+the id. Assigning ids to August URLs is not leakage: an id is a name, carrying no
+count or order information the model trains on.
+**Verified:** 9,348 rows, ids exactly 0…9347, urls unique, every URL in both
+months covered, max July id 7206 / min August-only id 7207; two runs give a
+byte-identical file (sha256 `f40cb7526741…`); runtime ~1 s.
+Open on it: the id rule silently depends on input order (no guard yet); not yet
+wired into `make data`.
+
+**C007 — two bugs on the way to D045, both caught by running it.** (1) The first
+version wrote one row per *request* (3,064,276 rows) — the per-request codes from
+`factorize` were saved instead of the `uniques` it also returns. (2) The id column
+was built as `np.arange(n - 1)`, one short, because `arange` already stops before
+its argument; pandas refused the mismatched column lengths.
+
+**D046 — `ty` added as a dev dependency** (type checker). Added by Ateeksh; hard
+rule 4 wants the reason recorded here — *reason: TODO (Ateeksh)*.
