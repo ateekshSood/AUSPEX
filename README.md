@@ -11,7 +11,7 @@ standard policies by trace replay on real request logs.
 make setup 
 make data
 make stats
-make test
+make testg
 ```
 
 ## Data

@@ -28,4 +28,5 @@ packages = ["src/auspex"]
 [dependency-groups]
 dev = [
     "pandas-stubs>=3.0.5.260730",
+    "ty>=0.0.81",
 ]
