@@ -5,7 +5,7 @@ class Policy:
     def __init__(self , capacity : int):
         self.capacity = capacity
         
-    
+
     def get(self , key : int) -> bool:
         """ True = hit . must also update frequency/recency state on hit""" 
         raise NotImplementedError 
