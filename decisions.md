@@ -891,5 +891,61 @@ version wrote one row per *request* (3,064,276 rows) — the per-request codes f
 was built as `np.arange(n - 1)`, one short, because `arange` already stops before
 its argument; pandas refused the mismatched column lengths.
 
-**D046 — `ty` added as a dev dependency** (type checker). Added by Ateeksh; hard
-rule 4 wants the reason recorded here — *reason: TODO (Ateeksh)*.
+**D046 — `ty` added as a dev dependency** (type checker). Added by Ateeksh.
+*Why:* he works in Zed, whose default type checker (basedpyright) was slow
+enough to be disruptive; `ty` is markedly faster. *Alternative considered and
+rejected:* AI autocompletion — deliberately not used, this project is for
+learning. Dev-group only; it never runs in `make data`/`stats`/`test` and
+cannot affect a result.
+
+**D047 — out-of-order input is asserted, never sorted away (PLAN §4.3, App C
+test 21).** Trace loaders check the whole column is non-decreasing in
+`(ts, seq)` and abort on violation. *Alternatives:* check only the first pair
+(rejected: proves nothing about later rows — Ateeksh spotted this himself);
+sort defensively at load (rejected: a backwards ts is an upstream bug in the
+parser/sessionizer, and sorting hides it — and in `vocab.py` the row order *is*
+the id assignment, so a silent reorder would renumber every URL). *Cost is not
+the reason either way:* the vectorised full check over July's 1,671,535 rows
+measures 0.011 s.
+
+**C008 — the `(ts, seq)` order guard was first written too strictly, and August
+caught it.** Claude advised "`ts` non-decreasing AND `seq` strictly increasing";
+Ateeksh implemented it and `make data` aborted. The rule is sound logic but the
+wrong requirement: it additionally asserts the *raw log* was already in time
+order. It is not. August row 1,373,546 (post-sort) shows raw line 1,547,064
+carrying ts 809900188 while line 1,547,066 carries 809900179 — one out-of-order
+entry in 1,392,741 rows; July has none. Since `sessionize.py:101` sorts by
+`(ts, seq)`, that row moves and `seq` stops being monotonic. Both months *are*
+correctly `(ts, seq)`-sorted (verified by lexsort identity).
+
+**D048 — the correct guard: for every adjacent row pair, `ts` increased, or
+`ts` was equal and `seq` increased.** `seq` is a tie-breaker *within* one
+timestamp only; across timestamps it carries no ordering claim. Kept as two
+asserts: `ts` non-decreasing on its own (a backwards timestamp is real
+time-travel and deserves its own message), plus the pairwise condition.
+Supersedes the `seq`-monotonic half of D047. Amends the finding in D047 that
+cost is irrelevant: the full vectorised check is ~0.01 s over July.
+*Data note for the §3 write-up:* the NASA August log contains exactly one
+out-of-time-order line. Worth a sentence — it is the reason replay order is
+defined on `(ts, seq)` and not on file order.
+
+**D049 — `policies/base.py` written and frozen (PLAN §4.1, hard rule 2).**
+Five methods (`get put observe on_tick stats`), `name` as a class attribute
+(`"base"`, overridden per policy), `__init__(capacity)`. *Deviation from §4.1,
+deliberate:* `get`/`put` `raise NotImplementedError` instead of `...`, while
+`observe`/`on_tick`/`stats` keep no-op bodies. *Why the split:* "do nothing" is
+a legitimate answer for the last three — LRU and LFU have no model to update
+and nothing in flight — but never for `get`/`put`; a policy that inherited a
+no-op `get` would report 0% hits, and one that inherited a no-op `on_tick`
+in Stage 3 would silently never land a prefetch and still print a plausible
+hit rate. Fail loudly where silence produces a wrong number.
+*Rejected:* `name` as an `__init__` argument (Ateeksh's first version) — the
+name is a property of the class, and as an argument nothing stops
+`LRU(5000, name="belady")` writing a false `"policy"` field into a results JSON.
+*Also settled here:* hits/misses stay in the harness, never in `stats()`.
+Counting is a protocol decision (P1 warmup, P2 window); one counted mask applied
+by one loop to every policy is what makes the five hit rates comparable.
+
+**D050 — `vocab` added to `make data` as a third recipe line** (after
+`sessionize`, which it reads), and to `.PHONY`. `make data` remains the single
+command from raw `.gz` to everything the replay needs.
