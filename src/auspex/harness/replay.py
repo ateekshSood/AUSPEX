@@ -1,4 +1,5 @@
 import argparse
+import time
 from pathlib import Path
 
 import numpy as np
@@ -6,6 +7,7 @@ import pandas as pd
 
 from auspex.config import Cfg
 from auspex.harness.protocols import counted_mask
+from auspex.harness.results import print_table, write_result
 from auspex.policies.base import Policy
 from auspex.policies.lru import LRU
 
@@ -48,11 +50,12 @@ def trace_loading(trace_name : str) -> dict:
     #convert each pandas Series to numpy arrays then reuturn as dict for easy access
     ts_numpy , ids_numpy , session_id_numpy = trace_parquet['ts'].to_numpy() , ids.to_numpy() , trace_parquet['session_id'].to_numpy()
 
-    return {"ts_numpy" : ts_numpy , "ids_numpy" : ids_numpy , "session_id_numpy" : session_id_numpy , "trace" : trace_parquet}
+    return {"ts_numpy" : ts_numpy , "ids_numpy" : ids_numpy , "session_id_numpy" : session_id_numpy , "trace" : trace_parquet , "final_trace_path" : final_trace_path}
 
-def policy_loop(policy : Policy  , len_trace : int , ts_numpy : np.ndarray , ids_numpy : np.ndarray , session_ids_numpy : np.ndarray  , counted_mask_output : np.ndarray) -> tuple[int , int]:
+def policy_loop(policy : Policy  , len_trace : int , ts_numpy : np.ndarray , ids_numpy : np.ndarray , session_ids_numpy : np.ndarray  , counted_mask_output : np.ndarray) -> dict:
 
     hits , misses = 0 , 0
+    start_time = time.perf_counter()
     
     for i in range(len_trace):
         policy.on_tick(ts_numpy[i])                 
@@ -61,25 +64,43 @@ def policy_loop(policy : Policy  , len_trace : int , ts_numpy : np.ndarray , ids
         else:
             if counted_mask_output[i]: misses += 1        
             policy.put(ids_numpy[i])               
-        policy.observe(ts_numpy[i], session_ids_numpy[i], ids_numpy[i])  
+        policy.observe(ts_numpy[i], session_ids_numpy[i], ids_numpy[i])
 
-    return (hits, misses)
+    end_time = time.perf_counter()
+
+    return {"hits" : hits, "misses" : misses , "time_taken" : end_time - start_time}
     
 
 def connector(trace_name : str):
 
     #get the output from the trace_loading the three numpy arrays 
     trace_loading_output = trace_loading(trace_name=trace_name)
-    ts_numpy , ids_numpy , session_ids_numpy , trace_parquet= trace_loading_output['ts_numpy'] ,trace_loading_output['ids_numpy'] , trace_loading_output['session_id_numpy'] , trace_loading_output['trace']
+    ts_numpy , ids_numpy , session_ids_numpy , trace_parquet , final_trace_path = trace_loading_output['ts_numpy'] ,trace_loading_output['ids_numpy'] , trace_loading_output['session_id_numpy'] , trace_loading_output['trace'] , trace_loading_output['final_trace_path']
 
     #call the output mask to get the cache warmup details
     cfg = Cfg()
     counted_mask_output = counted_mask(trace_parquet , "P1" , cfg )
     len_trace = len(trace_parquet)
-
+    counted_ts = ts_numpy[counted_mask_output]
+    table_print_list = []
+    
     for size in [100 , 500 , 1000 , 5000 , 10000]:
+        
         lru = LRU(size)
-        hits , misses = policy_loop(lru , len_trace , ts_numpy , ids_numpy , session_ids_numpy  , counted_mask_output)
+        policy_loop_output = policy_loop(lru , len_trace , ts_numpy , ids_numpy , session_ids_numpy  , counted_mask_output)
+
+        hits , misses , wall_clock_s = policy_loop_output["hits"] , policy_loop_output["misses"] , policy_loop_output["time_taken"]
+        
+        _ = write_result(policy="lru" , capacity=size , protocol="P1" , trace_path=final_trace_path , cfg = cfg , hits = hits , misses= misses, 
+            counted_requests=int(counted_mask_output.sum()) , wall_clock_s=wall_clock_s , counted_window=(counted_ts[0] , counted_ts[-1]) , policy_stats=lru.stats())
+
+        temp = {"policy" : "lru" ,  "capacity" : size , "hit_rate" : hits/(hits + misses),
+            "hits" : hits , "misses" : misses , "wall_clock_s" : wall_clock_s}
+
+        table_print_list.append(temp)
+
+
+    print_table(table_print_list)
         
 
 def main():
