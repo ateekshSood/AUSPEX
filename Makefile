@@ -9,7 +9,7 @@ data:
 	uv run python -m auspex.vocab
 
 baselines:
-	uv run python -m auspex.harness.replay -k
+	uv run python -m auspex.harness.replay -j
 	
 stats:
 	uv run python -m auspex.stats -j -a
