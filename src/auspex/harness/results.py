@@ -1,9 +1,14 @@
-"""Appendix B result JSON writer.
+'''
 
-One JSON file per (policy, capacity, protocol, trace) run, written to results/.
-PLAN hard rule 7: every number that gets reported goes through here, so that
-any figure can be traced back to the exact code, trace and config that made it.
-"""
+JSON RESULT WRITER I DIDNT WRITE IT MYSELF CUZ YOU KNOW JSON OUTPUT 
+BUT CMON I THINK THIS MUCH IS FINE 
+ITS JUST WRITING THE JSON OUTPUT 
+ITS FINE 
+RIGHT 
+:D
+
+'''
+
 
 import hashlib
 import json
