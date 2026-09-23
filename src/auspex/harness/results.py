@@ -27,10 +27,18 @@ LOG_TZ = timezone(timedelta(hours=-4))
 
 
 def git_sha() -> str:
-    """The commit the run was produced from (Appendix B: reproducibility)."""
-    return subprocess.check_output(
+    """The commit the run was produced from (Appendix B: reproducibility).
+
+    Suffixed "-dirty" when the working tree has uncommitted changes, because
+    then the SHA alone does not name the code that actually ran.
+    """
+    sha = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True
     ).strip()
+    dirty = subprocess.check_output(
+        ["git", "status", "--porcelain"], cwd=REPO_ROOT, text=True
+    ).strip()
+    return f"{sha}-dirty" if dirty else sha
 
 
 def file_sha256(path: Path) -> str:
