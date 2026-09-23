@@ -965,3 +965,43 @@ a `NoneType` error far from the cause. Recorded so it is not mistaken for an
 oversight when it bites.
 *Verified:* n=10 → 8 counted; July → 1,337,228 of 1,671,535; mask built in 0.0009 s
 (the first Python-loop version took 0.52 s).
+
+**D052 — `harness/replay.py`: trace loading, the §4.3 loop, and the per-size
+driver.** Loop written by Ateeksh, verbatim to §4.3's pinned order (`on_tick`
+before `get`; every miss calls `put`; `observe` after serve for every request,
+counted or not). Loading reads the month's cleaned parquet plus `vocab.parquet`,
+asserts `(ts, seq)` order (D048), maps urls to ids with `Series.map` and asserts
+no id came back missing, then hands the loop three NumPy arrays. **Measured on
+full July: ~0.8–2.0 s per replay against the 30 s budget of §4.3**, load 1.5 s.
+`hits + misses == counted.sum()` holds at every size.
+LRU/P1/July, counted 1,337,228 of 1,671,535:
+| capacity | 100 | 500 | 1000 | 5000 | 10000 |
+| hit rate | 0.6311 | 0.8771 | 0.9519 | 0.9968 | 0.9972 |
+*Observation for §5.5's headroom plot:* the vocab holds only **9,348 distinct
+URLs**, so capacity 10,000 can hold the entire universe — LRU never evicts there
+and its 3,702 misses are purely compulsory. The top of the PLAN's size range is
+effectively an infinite cache on this trace; the interesting sizes are the small
+end, and Belady's headroom over LRU will be near zero at 5k/10k.
+
+**D053 — results JSON writer `harness/results.py` (Appendix B).** *Written by
+Claude at Ateeksh's request* — the plumbing exemption in CLAUDE.md's ASK-FIRST
+list; the loop it wraps is his. One JSON per (policy, capacity, protocol, trace)
+in `results/`; refuses to write when `hits + misses != counted_requests`, since a
+mismatch means the mask and the loop disagree. Stage 1 subset of the schema; the
+prefetch block arrives in Stage 3.
+**`git_sha` kept, with a `-dirty` suffix** when `git status --porcelain` is
+non-empty. Ateeksh first proposed dropping the field ("its not like we wanna know
+exactly which commit is giving this output"); the argument that changed it was
+concrete rather than procedural — the Stage 3 τ sweep writes a dozen JSONs over
+several days while `markov.py` keeps changing, and without the SHA there is no way
+to tell a stale result from a current one, while rerunning everything is exactly
+what §1 rule 12 forbids for P2. The `-dirty` suffix fixes the real defect he was
+pointing at: an unqualified SHA names a commit that may not contain the code that
+ran. Cost is ~5 ms per run.
+
+**Q004 — terminal output of `make baselines`.** Ateeksh would rather print only
+"written to results/" and skip the per-size table. Flagged because §4.4's
+acceptance item reads "prints hit rates at sizes 100/500/1k/5k/10k **and** writes
+JSONs", and hard rule 1 makes stage gates hard; also 25 runs in Stage 2 make a
+folder of JSONs a poor way to answer "does this look sane". `print_table` exists
+and is one call. Unresolved at time of writing.
