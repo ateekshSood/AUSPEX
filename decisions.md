@@ -949,3 +949,19 @@ by one loop to every policy is what makes the five hit rates comparable.
 **D050 — `vocab` added to `make data` as a third recipe line** (after
 `sessionize`, which it reads), and to `.PHONY`. `make data` remains the single
 command from raw `.gz` to everything the replay needs.
+
+**D051 — `harness/protocols.py`: `counted_mask(trace, protocol, cfg) -> np.ndarray[bool]`.**
+Written by Ateeksh. One boolean per request; the replay serves every request and
+counts only where the mask is True. P1 = first `int(n * warmup_frac)` entries
+False. *Signature:* takes the whole DataFrame rather than just `n`, chosen so the
+date-based protocols (P2/P2-dev/P3, §6.2) slot in without changing callers; safe
+because the mask is built once, outside the hot loop, so hard rule 6 is untouched.
+*Why the mask is policy-independent:* one mask handed to all five policies is what
+makes their hit rates comparable; a mask that varied by policy would grade them on
+different requests.
+**Known gap, Ateeksh's call:** unknown protocol names fall through and return
+`None` rather than raising. A `"P2"` call in Stage 3 will therefore fail later with
+a `NoneType` error far from the cause. Recorded so it is not mistaken for an
+oversight when it bites.
+*Verified:* n=10 → 8 counted; July → 1,337,228 of 1,671,535; mask built in 0.0009 s
+(the first Python-loop version took 0.52 s).
