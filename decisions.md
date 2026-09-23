@@ -1005,3 +1005,54 @@ acceptance item reads "prints hit rates at sizes 100/500/1k/5k/10k **and** write
 JSONs", and hard rule 1 makes stage gates hard; also 25 runs in Stage 2 make a
 folder of JSONs a poor way to answer "does this look sane". `print_table` exists
 and is one call. Unresolved at time of writing.
+
+**D054 — `tests/test_replay.py`: Appendix C tests 1-5 (PLAN §4.4).** Written by
+Claude *after* Ateeksh's implementation, from the PLAN's stated requirements
+(hard rule 8), with every expected count derived by hand in a comment beside it:
+the 10-request capacity-2 trace is worked request by request in the file.
+14 tests; full suite now **63 passed**.
+*Finding worth keeping:* the cyclic pathology (ABCD x 1000, cap 3 -> 0.0) does
+**not** catch a `get()` that forgets `move_to_end`. Verified by building a broken
+LRU that degrades to FIFO: it also scores exactly 0 hits, because with a 4-cycle
+in 3 slots recency order and insertion order evict the same key. What catches it
+is the hand-trace's *exact hit/miss sequence* (`M M H M H H H M M H` vs the
+correct `M M H M M H H M M H`, end state `[1, 4]` vs `[4, 1]`). Hence the test
+asserts the whole sequence and the end state, not just the totals -- and hence
+§4.4 lists both tests rather than treating the cyclic one as sufficient.
+*Design note:* the tests locate the cache through `vars(policy)` rather than
+naming the attribute, so they test §4.2's contract rather than the implementer's
+choice of variable name. `RESULTS_DIR` is monkeypatched to a tmp dir for the
+determinism test so `results/` is never polluted by a test run.
+
+**D055 — `make baselines` added** (`.PHONY`, July only). Named `baselines`, not
+`replay`, per CLAUDE.md's command list: LFU/Belady/infinite join the same target
+in Stage 2. `-a` deliberately omitted -- August is not replayed until Stage 4's
+P3, and an `Aug95` JSON today would belong to no protocol.
+
+### Session 9 close — 2026-09-23 · Stage 1 complete but for the gate
+
+**Stage 1 acceptance (PLAN §4.4):**
+- [x] `make baselines` prints hit rates at 100/500/1k/5k/10k and writes one
+      Appendix B JSON per size.
+- [x] All §4.4 tests green — 14 new, full suite **63 passed**.
+- [x] Full-July LRU replay well under 30 s (~1.7–2.2 s per size, 1.5 s load).
+- [ ] **Stage-gate explain-back** — deferred by Ateeksh to the next session;
+      questions written into `questions.txt` as Q4–Q6 (plus Q7 as a Stage 2
+      preview). Q4 and Q5 are the Stage 0 questions, restated now that the
+      replay loop makes them concrete. Hard rule 1 means Stage 1 is not
+      closed until these are answered; Ateeksh chose to start Stage 2 first
+      and answer them alongside it. Recorded, not silently skipped.
+
+**Chores outstanding at session close:**
+1. Ateeksh to commit (he commits, never Claude unprompted).
+2. Re-run `make baselines` after the commit and replace the five `-dirty`
+   JSONs, so `results/` holds only files whose `git_sha` names real code.
+3. `main.py` at the repo root is still leftover from `uv init` (open since
+   session 8).
+4. Q004 resolved in favour of printing the table (§4.4 requires it); the
+   "written to results/" line was never added — harmless.
+
+**Files that exist after Stage 1:** `src/auspex/vocab.py`,
+`policies/{__init__,base,lru}.py`, `harness/{__init__,protocols,replay,results}.py`,
+`tests/test_replay.py`, `results/*_lru_*_P1.json`. Makefile targets: setup,
+data, stats, baselines, test.

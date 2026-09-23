@@ -80,8 +80,10 @@ def connector(trace_name : str):
     #call the output mask to get the cache warmup details
     cfg = Cfg()
     counted_mask_output = counted_mask(trace_parquet , "P1" , cfg )
+    
     len_trace = len(trace_parquet)
     counted_ts = ts_numpy[counted_mask_output]
+    
     table_print_list = []
     
     for size in [100 , 500 , 1000 , 5000 , 10000]:
@@ -99,7 +101,7 @@ def connector(trace_name : str):
 
         table_print_list.append(temp)
 
-
+    #function used to print the final resul table check the results.py for more detail 
     print_table(table_print_list)
         
 

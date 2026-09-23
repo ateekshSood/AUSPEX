@@ -1,7 +1,7 @@
 {
   "run_id": "2026-09-23T08_lru_1000_P1",
-  "git_sha": "6c2fed35d860177e54d035d708a8b65370de864f-dirty",
-  "generated_at": "2026-09-23T08:01:22.980003+00:00",
+  "git_sha": "71c734a3a132aab9ec6ef81c40be3ad9e7f2d841-dirty",
+  "generated_at": "2026-09-23T08:09:36.379537+00:00",
   "trace": "data/processed/NASA_access_log_cleaned_Jul95.parquet",
   "trace_sha256": "076b88a6b262c2c38d3d0133b4e08c122ea08a91c65c86dbd3c630d1cdcab43f",
   "protocol": "P1",
@@ -24,5 +24,5 @@
   "misses": 64298,
   "hit_rate": 0.951917,
   "policy_stats": {},
-  "wall_clock_s": 1.857
+  "wall_clock_s": 1.101
 }
