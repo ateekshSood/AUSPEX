@@ -1056,3 +1056,48 @@ P3, and an `Aug95` JSON today would belong to no protocol.
 `policies/{__init__,base,lru}.py`, `harness/{__init__,protocols,replay,results}.py`,
 `tests/test_replay.py`, `results/*_lru_*_P1.json`. Makefile targets: setup,
 data, stats, baselines, test.
+
+---
+
+## Session 10 — 2026-09-24 — Stage 2 opened (PLAN §5)
+
+**Explain-back status (Stage 0/1 gate):** A1 improved (grouped replay →
+hit rate too high; last sentence unfinished). A2 still says "most sessions
+are singletons" (it is 11%) and lacks the up/down answer; A3 blank. Both were
+re-explained in chat and Ateeksh chose to move on. **Gate not marked closed**
+until A2 (direction) and A3 are written in his own words. A6 correct; A7
+deferred to Belady.
+
+**D056 — LFU variant pinned (PLAN §5.1), before any code.** In-cache LFU:
+count = 1 on insert, +1 per hit, discarded on eviction (no ghost history);
+evict min count, tie-break least-recently-used. Structure (Ateeksh's design,
+reached by Q&A): map #1 `url → count`; map #2 `count → OrderedDict` of urls,
+front = least recent; empty buckets deleted (option B — chosen over leaving
+empties + len checks, "why store useless empty stuff"); a stored `min_count`:
+= 1 after any insert, += 1 when a hit empties the `min_count` bucket, else
+unchanged. Alternatives: heap with lazy invalidation (PLAN allows it);
+`min(map2)` scan per eviction. Why: O(1) per operation, deterministic
+tie-break, and it reuses the OrderedDict trick he already built in LRU.
+
+**D057 — LFU loose ends closed (Ateeksh's code).** (1) The eviction path now
+deletes a bucket that `popitem` empties, so "no empty buckets" (D056) holds
+everywhere. Leaving it would have been safe — `min_count` only lands on a
+bucket as a URL is moved into it — but deleting removes the need for that
+argument. (2) `put` on an already-cached key now performs the full hit update
+(shared helper `key_in_map`, also used by `get`). The old branch bumped the
+count without leaving the old bucket: a crafted `put 7, put 7, put 8, put 9`
+evicted count-2 URL 7 over count-1 URL 8 and left a ghost 7 in bucket 2.
+Unreachable in today's replay (the loop calls `put` only after a miss), fixed
+because Stage 3 prefetch inserts and direct test calls will reach it.
+Ad-hoc check: map1/map2 consistency, no empty buckets, and
+`min_count == min(map2)` held over 100k random ops at capacities 1–10.
+
+**D058 — `tests/test_lfu.py` (Claude's, at Ateeksh's request, after his
+code).** Appendix C test 6 (tie-break: count-1 ties, count-2 ties where last
+use and first insertion disagree, determinism across runs) and test 3 for LFU
+(occupancy ≤ capacity at six sizes, plus a fills-up companion), with two tests
+for D056's other clauses (min count beats recency; count destroyed on
+eviction) and a 10-request hand-trace on the LRU hand-trace's keys. All
+black-box (get/put → H/M string), so they bind to the definition, not the
+data structure. Every expected string derived by hand in its docstring.
+8 new, full suite **71 passed**.
