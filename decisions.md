@@ -1101,3 +1101,11 @@ eviction) and a 10-request hand-trace on the LRU hand-trace's keys. All
 black-box (get/put → H/M string), so they bind to the definition, not the
 data structure. Every expected string derived by hand in its docstring.
 8 new, full suite **71 passed**.
+
+**D059 — LFU `put` on an already-cached key is a no-op (option b).** Chosen
+over (a) "count it as a use" (what D057 briefly implemented). Why: D056 says
++1 on each *hit*, and a `put` is not a demand request — counts must measure
+what users did, not what a caller (e.g. a prefetcher) predicted. Keeps the
+baseline exactly equal to its pinned definition (hard rule 5). Low stakes in
+practice: prefetching sits on LRU (§6.5), so the branch is reachable only from
+direct calls. Ateeksh to make the code change.
