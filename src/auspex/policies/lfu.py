@@ -31,80 +31,115 @@ class LFU(Policy):
 
     def __init__(self , capacity : int):
         super().__init__(capacity)
-        self.url_count_map_structure = {}
-        self.count_map_url_ordered_list = {}
-        self.min_count = -1
+        self.url_count_map_structure = {}  #strucutre 1
+        self.count_map_url_ordered_list = {} #structure 2
+        self.min_count = -1 # min count frquency for eviction 
 
     def add_to_ordered_dict(self , key : int , new_count : int) -> None:
 
+        # if the new count has no mapping 
+
         if new_count not in self.count_map_url_ordered_list:
+            # make the new count's mapping
             self.count_map_url_ordered_list[new_count] = OrderedDict()
-            
+
+        # if it already has a mapping then simply add the url in the new count's ordered dict mapped to None.
         self.count_map_url_ordered_list[new_count][key] = None
 
 
     def key_in_map_handle(self , key : int) -> None:
-        
+
+        # we will have to update its count since we are interacting with it 
+
+        #get old count from strucure 1
         old_count = self.url_count_map_structure[key]
+        # get old ordered list for the old count from structure 2
         ordered_list_of_old_count = self.count_map_url_ordered_list[old_count]
-    
+
+        # delete the url from the ordered list of old count
         del ordered_list_of_old_count[key]
 
+        # if the ordered list of old count has no elements left after evicitng the url 
+        # then simply delete it 
         if not ordered_list_of_old_count :
+            #delete the count mapping 
             del self.count_map_url_ordered_list[old_count]
 
+            # if the count was min count then we will increment min count by 1 cuz the url's count has also increased by 1 
+            # so we simply have to increase the min count by 1 cuz the old min count url is in an incremented by 1 count mapping
             if old_count == self.min_count:
                 self.min_count +=1 
 
-        
+        #increase count
         self.url_count_map_structure[key] +=1
 
+        #get new count
         new_count = self.url_count_map_structure[key]
 
-    
+        # helper fn to add in ordered dict
         self.add_to_ordered_dict(key , new_count) 
         
+    # the fn to get the key from the cache
 
     def get(self , key : int) -> bool:
 
+        #if it has a valid count in structure 1
         if key in self.url_count_map_structure:
-            
+
+            #helper fn for when key is found in the strucutre
             self.key_in_map_handle(key)
             
             return True 
 
         else:
+            #key not found in the strucure
             return False 
 
 
+    # fn to put a new key in the cache
     def put(self , key : int) -> None:
 
+        # if the key is already in the strucutre 1 
         if key in self.url_count_map_structure:
 
+            # handled by already in the map helper fn
             self.key_in_map_handle(key)
             
-
+        # if the capacity of the strucutre is full
         elif len(self.url_count_map_structure) >= self.capacity:
 
+            # pop the min count and the least recently used url and get the url 
+            # it returns key that is url and value taht is None
             url_remove , _ = self.count_map_url_ordered_list[self.min_count].popitem(last = False)
+            
+            # delelte the url from structure 1
             del self.url_count_map_structure[url_remove]
-
+            
+            # if the ordered list of the min count is empty after eviction 
             if not self.count_map_url_ordered_list[self.min_count]:
+                # delete the count mapping
                 del self.count_map_url_ordered_list[self.min_count] 
 
+            # for the new url make the mapping from new url -> 1 count
             self.url_count_map_structure[key] = 1 
+            # since a new url has been inserted the min count will become 1
             self.min_count = 1
 
-      
+            # helper fn to add to ordered dict , the url in structure 2
             self.add_to_ordered_dict(key , self.min_count)
 
          
         else:
+
+            # if the cache is not empty 
+
+            # for the new url make the mapping from new url -> 1 count
+            # since a new url has been inserted the min count will become 1
             
             self.url_count_map_structure[key] = 1
             self.min_count = 1
 
-            
+            # helper fn to add to ordered dict , the url in structure 2
             self.add_to_ordered_dict(key , self.min_count)
 
 
