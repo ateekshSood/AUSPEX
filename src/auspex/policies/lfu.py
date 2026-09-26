@@ -102,8 +102,10 @@ class LFU(Policy):
         # if the key is already in the strucutre 1 
         if key in self.url_count_map_structure:
 
-            # handled by already in the map helper fn
-            self.key_in_map_handle(key)
+            # we have decided that if the key is already in the cache we are not incrementng its 
+            # frequency
+            pass 
+            
             
         # if the capacity of the strucutre is full
         elif len(self.url_count_map_structure) >= self.capacity:
