@@ -10,6 +10,8 @@ from auspex.harness.protocols import counted_mask
 from auspex.harness.results import print_table, write_result
 from auspex.policies.base import Policy
 from auspex.policies.lru import LRU
+from auspex.policies.lfu import LFU
+from auspex.policies.infinite import Infinite
 
 
 def trace_loading(trace_name : str) -> dict:
@@ -85,21 +87,25 @@ def connector(trace_name : str):
     counted_ts = ts_numpy[counted_mask_output]
     
     table_print_list = []
+
+    policy_arr = [LRU , LFU , Infinite]
+
+    for policy in policy_arr:
     
-    for size in [100 , 500 , 1000 , 5000 , 10000]:
-        
-        lru = LRU(size)
-        policy_loop_output = policy_loop(lru , len_trace , ts_numpy , ids_numpy , session_ids_numpy  , counted_mask_output)
-
-        hits , misses , wall_clock_s = policy_loop_output["hits"] , policy_loop_output["misses"] , policy_loop_output["time_taken"]
-        
-        _ = write_result(policy="lru" , capacity=size , protocol="P1" , trace_path=final_trace_path , cfg = cfg , hits = hits , misses= misses, 
-            counted_requests=int(counted_mask_output.sum()) , wall_clock_s=wall_clock_s , counted_window=(counted_ts[0] , counted_ts[-1]) , policy_stats=lru.stats())
-
-        temp = {"policy" : "lru" ,  "capacity" : size , "hit_rate" : hits/(hits + misses),
-            "hits" : hits , "misses" : misses , "wall_clock_s" : wall_clock_s}
-
-        table_print_list.append(temp)
+        for size in [100 , 500 , 1000 , 5000 , 10000]:
+            
+            current_policy = policy(size) 
+            policy_loop_output = policy_loop(current_policy , len_trace , ts_numpy , ids_numpy , session_ids_numpy  , counted_mask_output)
+    
+            hits , misses , wall_clock_s = policy_loop_output["hits"] , policy_loop_output["misses"] , policy_loop_output["time_taken"]
+            
+            _ = write_result(policy=policy.name , capacity=size , protocol="P1" , trace_path=final_trace_path , cfg = cfg , hits = hits , misses= misses, 
+                counted_requests=int(counted_mask_output.sum()) , wall_clock_s=wall_clock_s , counted_window=(counted_ts[0] , counted_ts[-1]) , policy_stats=current_policy.stats())
+    
+            temp = {"policy" : policy.name ,  "capacity" : size , "hit_rate" : hits/(hits + misses),
+                "hits" : hits , "misses" : misses , "wall_clock_s" : wall_clock_s}
+    
+            table_print_list.append(temp)
 
     #function used to print the final resul table check the results.py for more detail 
     print_table(table_print_list)
