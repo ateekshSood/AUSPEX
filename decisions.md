@@ -1109,3 +1109,19 @@ what users did, not what a caller (e.g. a prefetcher) predicted. Keeps the
 baseline exactly equal to its pinned definition (hard rule 5). Low stakes in
 practice: prefetching sits on LRU (§6.5), so the branch is reachable only from
 direct calls. Ateeksh to make the code change.
+
+**D060 — `tests/test_infinite.py` (Claude's, at Ateeksh's request, after his
+code).** Appendix C test 9: hits(infinite) ≥ hits(LRU/LFU) on uniform, skewed
+and cyclic traces at six sizes, full-sequence counting. Plus: misses =
+distinct keys (hand trace), capacity ignored, nothing forgotten, and every
+demand-fetch policy equals infinite once capacity ≥ distinct keys (July's
+10k result in miniature). Belady joins the property when it exists.
+5 new, suite **76 passed**. On real July P1, infinite reproduces LRU(10,000)
+exactly: 1,333,526 hits / 3,702 misses.
+
+**C-bug in Claude's `git_sha()` (D053).** It marks a run `-dirty` if
+`git status --porcelain` shows *anything* — including untracked result files
+the run itself just wrote. So the first JSON of a batch dirties every later
+one, even from a clean commit; this is why the Stage 1 re-run after cf7a48c
+stayed dirty, and why all 15 files of 2026-09-26T19 are dirty. Not Ateeksh's
+error. Proposed fix pending his OK.
