@@ -1125,3 +1125,7 @@ the run itself just wrote. So the first JSON of a batch dirties every later
 one, even from a clean commit; this is why the Stage 1 re-run after cf7a48c
 stayed dirty, and why all 15 files of 2026-09-26T19 are dirty. Not Ateeksh's
 error. Proposed fix pending his OK.
+**Fixed (Claude, Ateeksh's OK):** `git_sha()` now runs
+`git status --porcelain -- . ':(exclude)results'`, so a run's own output can't
+dirty it; a modified source/config/test file still does. Verified: with only
+`results/` changes the check is empty. Suite 76 green.

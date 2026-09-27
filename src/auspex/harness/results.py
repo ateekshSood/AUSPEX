@@ -31,12 +31,17 @@ def git_sha() -> str:
 
     Suffixed "-dirty" when the working tree has uncommitted changes, because
     then the SHA alone does not name the code that actually ran.
+
+    results/ is excluded: it is the run's own output, so counting it would
+    let the first JSON of a batch mark every later one dirty.
     """
     sha = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True
     ).strip()
     dirty = subprocess.check_output(
-        ["git", "status", "--porcelain"], cwd=REPO_ROOT, text=True
+        ["git", "status", "--porcelain", "--", ".", ":(exclude)results"],
+        cwd=REPO_ROOT,
+        text=True,
     ).strip()
     return f"{sha}-dirty" if dirty else sha
 
