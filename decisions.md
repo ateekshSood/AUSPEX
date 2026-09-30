@@ -1129,3 +1129,33 @@ error. Proposed fix pending his OK.
 `git status --porcelain -- . ':(exclude)results'`, so a run's own output can't
 dirty it; a modified source/config/test file still does. Verified: with only
 `results/` changes the check is empty. Suite 76 green.
+
+**D061 — Belady (`policies/belady.py`, Ateeksh's) and its harness hook.**
+Two passes per §5.3: `backward_pass` (read-then-update with `dict.get(key, n)`,
+n = "never") and a replay with a dict (truth) + max-heap via negated
+`HeapStore(next_use, key)` NamedTuples, lazy invalidation (an entry is live
+iff its key is cached AND the dict's value equals the un-negated entry).
+Position: counter advanced in `get`, the served position saved in `self.curr`
+so the following `put` reads the same request (option b; `put` after the
+increment would read request i+1). Relies on exactly one `get` per request,
+in trace order. `put` on a cached key is a no-op (as D059). Constructed as
+`Belady(capacity, ids_numpy)` — the same array the replay iterates; the
+harness special-cases it by `policy.name == "belady"` (a string check: must
+stay in sync with the class attribute — it broke once when the name was
+lower-cased). §4.1 base contract unchanged. ~3 s per July replay.
+
+July P1 hit rates at 100/500/1k/5k/10k — Belady 0.7863 / 0.9432 / 0.9790 /
+0.9972 / 0.9972; LFU 0.5969 / 0.8244 / 0.9247 / 0.9970 / 0.9972; infinite
+0.9972 flat. Under full-sequence counting Belady has fewer misses than LRU at
+every size (−259,172 at 100) and ties at 10k. Headroom interpretation and the
+§5.5 go/no-go are Ateeksh's, pending the plot.
+
+**D062 — `tests/test_belady.py` (Claude's, at Ateeksh's request, after his
+code).** Test 7: four hand-computed traces (the session's ABACBA, the textbook
+1-2-3-4-1-2-5-1-2-3-4-5 string at 3 and 4 frames = 7 and 6 misses, and the
+ABCD cycle where LRU scores 0 and OPT 3). A brute-force forward-scan MIN in
+the test file matches the fast implementation request-by-request on three
+trace shapes × six sizes (ties occur only among never-again keys, so the whole
+H/M string is tie-break independent). Test 8: misses(Belady) ≤ LRU, LFU under
+full-sequence counting. Test 9's Belady half: infinite ≥ Belady, and equal
+once capacity ≥ distinct keys. 9 new, suite **85 passed**.
