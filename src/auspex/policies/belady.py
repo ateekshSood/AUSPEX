@@ -1,19 +1,22 @@
-import curses
-import numpy as np
 import heapq
 from typing import NamedTuple
 
+import numpy as np
+
 from auspex.policies.base import Policy
+
 
 class HeapStore(NamedTuple):
     next_use : int 
     key : int
 
-class Belday(Policy):
+class Belady(Policy):
 
-    def __init__(self , capactiy : int , trace_url : np.ndarray):
+    name = "belady"
+    
+    def __init__(self , capacity : int , trace_url : np.ndarray):
 
-        super().__init__(capacity=capactiy)
+        super().__init__(capacity=capacity)
         self.position_counter = 0 
         self.cache_dict = {}
         self.heap = []
@@ -59,17 +62,21 @@ class Belday(Policy):
 
     def put(self , key : int) -> None:
 
-        if(len(self.cache_dict) > self.capacity):
+        if key in self.cache_dict:
+            return
+
+        if(len(self.cache_dict) >= self.capacity):
 
             while(True):
                 
                 popped_item = heapq.heappop(self.heap)
                 
-                if popped_item.key  in self.cache_dict and self.cache_dict[key] == popped_item.next_use :
+                if popped_item.key  in self.cache_dict and self.cache_dict[popped_item.key] == -popped_item.next_use :
+                    del self.cache_dict[popped_item.key]
                     break
 
-            self.cache_dict[key] = self.next_use_arr[self.curr]
-            heapq.heappush(self.heap , HeapStore(next_use= -self.next_use_arr[self.curr] , key = key))
+        self.cache_dict[key] = self.next_use_arr[self.curr]
+        heapq.heappush(self.heap , HeapStore(next_use= -self.next_use_arr[self.curr] , key = key))
         
                 
 
