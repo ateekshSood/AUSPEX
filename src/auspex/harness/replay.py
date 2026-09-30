@@ -9,9 +9,10 @@ from auspex.config import Cfg
 from auspex.harness.protocols import counted_mask
 from auspex.harness.results import print_table, write_result
 from auspex.policies.base import Policy
-from auspex.policies.lru import LRU
-from auspex.policies.lfu import LFU
+from auspex.policies.belady import Belady
 from auspex.policies.infinite import Infinite
+from auspex.policies.lfu import LFU
+from auspex.policies.lru import LRU
 
 
 def trace_loading(trace_name : str) -> dict:
@@ -88,13 +89,18 @@ def connector(trace_name : str):
     
     table_print_list = []
 
-    policy_arr = [LRU , LFU , Infinite]
+    policy_arr = [LRU , LFU , Infinite , Belady]
 
     for policy in policy_arr:
     
         for size in [100 , 500 , 1000 , 5000 , 10000]:
-            
-            current_policy = policy(size) 
+
+            if policy.name == "belady":
+                current_policy = policy(size ,ids_numpy )
+
+            else:
+                current_policy = policy(size) 
+                
             policy_loop_output = policy_loop(current_policy , len_trace , ts_numpy , ids_numpy , session_ids_numpy  , counted_mask_output)
     
             hits , misses , wall_clock_s = policy_loop_output["hits"] , policy_loop_output["misses"] , policy_loop_output["time_taken"]
