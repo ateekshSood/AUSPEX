@@ -1,0 +1,5 @@
+data/processed/Jul95.csv LRU cache size      100, 1671535 req, miss ratio 0.3659
+data/processed/Jul95.csv LRU cache size      500, 1671535 req, miss ratio 0.1182
+data/processed/Jul95.csv LRU cache size     1000, 1671535 req, miss ratio 0.0458
+data/processed/Jul95.csv LRU cache size     5000, 1671535 req, miss ratio 0.0046
+data/processed/Jul95.csv LRU cache size    10000, 1671535 req, miss ratio 0.0043

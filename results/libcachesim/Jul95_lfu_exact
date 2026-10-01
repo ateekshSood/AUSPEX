@@ -1,0 +1,5 @@
+data/processed/Jul95.csv LFU cache size      100, 1671535 req, 640769 miss, miss ratio 0.3833
+data/processed/Jul95.csv LFU cache size      500, 1671535 req, 262978 miss, miss ratio 0.1573
+data/processed/Jul95.csv LFU cache size     1000, 1671535 req, 111748 miss, miss ratio 0.0669
+data/processed/Jul95.csv LFU cache size     5000, 1671535 req, 7539 miss, miss ratio 0.0045
+data/processed/Jul95.csv LFU cache size    10000, 1671535 req, 7207 miss, miss ratio 0.0043
