@@ -1215,3 +1215,28 @@ Next session starts on `plots/curves.py`: Ateeksh to state how the script
 reads the JSONs and selects one consistent batch. Still open: explain-back
 A2/A3/Q7; why LFU < LRU at small sizes; weak (ts|seq) order guard (test 21);
 committed no-warmup mode for the cross-check.
+
+**D066 — `plots/curves.py` (Ateeksh's): reads JSONs, never re-runs replay.**
+Decision: load `results/*P1.json` → pick newest batch by `generated_at` (or
+`--batch` prefix) → check one sha, not `-dirty`, every (policy, capacity) in
+POLICY_ARR × SIZE_ARR, unique, count = product → group by policy → plot.
+Alternatives: re-run replay inside the plot (rejected: hard rule 7, one source
+of truth); plotnine (rejected: new dep, matplotlib already used in stats.py).
+Policy/size lists hoisted to `POLICY_ARR`/`SIZE_ARR` in replay.py so the plot
+can't drift from the harness (a hand-typed "infinte" broke the check once).
+Known limits: glob `*P1.json` filters protocol by filename and will skip
+P2-dev runs; no sha stamp on the PNG (Ateeksh's call; JSONs carry it).
+Mistake caught: "Markov must land below Belady" — wrong; Belady is the
+demand-fetch optimum, prefetching can exceed it (PLAN §5.2).
+Headroom (pp, Belady−LRU / infinite−LRU): 100 → 15.52/36.61, 500 → 6.60/12.01,
+1000 → 2.71/4.53, ≥5000 → ~0. README section written by Claude at his request.
+Discussion: "real caches aren't 100 slots" → size is meaningful as a fraction
+of the catalog (~7.2k URLs; 100 = 1.4%, 500 = 6.9%).
+
+
+FIRST THING WRITTEN BY ME HERE KINDA SEEMS ODD BUT YEAH WE WILL CONTINUE WITH THE PREFETCHER IDEA 
+AS WE SAW THAT LRU HAS GAPS TO IMPROVE AT SMALL CACHE SIZE WE WOULD GO FOR 100 , 500 CACHE SIZE 
+WE WOULD ALSO KEEP 1000 CACHE SIZE WE NOTICE A AROUND 2 IDK THE EXACT NUMBER PLS DONT KILL ME PP GAP 
+WE WOULD USE 1000 TO SEE HOW WOULD OUR PREFETCHER DO WHEN THERE IS NOT ENOUGH GAP 
+UWU
+I HOPE I GET A JOB 
