@@ -1207,3 +1207,11 @@ hand-verified + brute-force-reference tests (D062), as §5.3 permits.
 `results/libcachesim_crosscheck.md` written by Claude at Ateeksh's request.
 Open: our-side full-count numbers came from a one-off command; a committed
 no-warmup mode / make target would make them one-command reproducible.
+
+**Session 10 close (2026-10-01).** Stage 2 acceptance: [x] LFU/Belady/
+infinite + property tests · [x] libCacheSim exact match + evidence file ·
+[ ] four-curve plot + README headroom · [ ] go/no-go (Ateeksh's call).
+Next session starts on `plots/curves.py`: Ateeksh to state how the script
+reads the JSONs and selects one consistent batch. Still open: explain-back
+A2/A3/Q7; why LFU < LRU at small sizes; weak (ts|seq) order guard (test 21);
+committed no-warmup mode for the cross-check.
