@@ -14,6 +14,34 @@ make stats
 make testg
 ```
 
+## Baseline headroom (Stage 2)
+
+![Hit rate vs cache size, P1 July](results/headroom_P1.png)
+
+Hit rate (%) on NASA July 1995, protocol P1, batch `2026-09-30T17` at commit
+`2695fb3`. Regenerate the plot with `uv run python -m auspex.plots.curves`; the
+numbers come from the JSONs in `results/`. July has about 7.2k distinct URLs,
+so "% of catalog" = capacity / 7,207.
+
+| capacity | % of catalog | LRU | LFU | Belady — demand-fetch optimum | infinite demand-loaded cache — reference | Belady − LRU (pp) | infinite − LRU (pp) |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 1.4% | 63.11 | 59.69 | 78.63 | 99.72 | **15.52** | **36.61** |
+| 500 | 6.9% | 87.72 | 82.44 | 94.32 | 99.72 | **6.60** | **12.01** |
+| 1,000 | 13.9% | 95.19 | 92.47 | 97.90 | 99.72 | 2.71 | 4.53 |
+| 5,000 | 69.4% | 99.68 | 99.70 | 99.72 | 99.72 | 0.04 | 0.04 |
+| 10,000 | 138.8% | 99.72 | 99.72 | 99.72 | 99.72 | 0.00 | 0.00 |
+
+**Reading it.** When the cache holds less than about 7% of the catalog, LRU leaves
+6.6–15.5 pp of hit rate on the table compared with the best possible eviction
+policy. At about 14% of the catalog that gap drops below 3 pp, and once most of
+the catalog fits, every policy ties. Both reference lines are *demand-fetch*:
+neither can avoid a URL's first request, so neither is a ceiling for a prefetcher
+(PLAN §5.2). The upper bound for prefetching is the oracle-prefetch bound, built
+at the start of Stage 3.
+
+LRU and LFU match libCacheSim exactly at all five sizes; see
+`results/libcachesim_crosscheck.md`.
+
 ## Data
 
 The NASA-HTTP 1995 traces are **not committed to this repo** — they are 37 MB of
