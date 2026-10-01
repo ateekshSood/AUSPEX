@@ -1,10 +1,12 @@
 import json
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+
 from auspex.harness.replay import POLICY_ARR, SIZE_ARR
 
 
-def load_results() -> list[dict]:
+def load_results() -> tuple[list[dict] , Path]:
 
     parent = Path(__file__).resolve().parents[3] #auspex
     result_path = parent / "results"
@@ -19,7 +21,7 @@ def load_results() -> list[dict]:
 
         result_json.append(json_dict)
 
-    return result_json
+    return (result_json , result_path)
 
 
 def select_batch(results , batch=None) -> list[dict]:
@@ -45,10 +47,7 @@ def select_batch(results , batch=None) -> list[dict]:
 
     if len(filtered_results) == 0:
    
-        raise ValueError(f"no results matched batch : {batch}")
-      
-        
-        
+        raise ValueError(f"no results matched batch : {batch}") 
     
     return filtered_results
 
@@ -83,8 +82,71 @@ def check_batch(result_arr : list[dict]) -> None:
     if len(set_policy_combination) != len(result_arr):
         raise ValueError("The result array does not contain unique capacity and cache policies")
 
-    if len(result_arr) != 20:
+    if len(result_arr) != len(POLICY_ARR) * len(SIZE_ARR):
         raise ValueError("The lenght of result array is not equal to the unique policy and capacities combiantions")
 
-def group_by_policy(batch) -> dict[str , list[tuple[int , float]]]:
-    pass
+
+def group_by_policy(batch : list[dict]) -> dict[str , list[tuple[int , float]]]:
+
+    group_dict = {}
+
+    for result in batch:
+
+        policy = result["policy"]
+
+        if policy not in group_dict:
+            group_dict[policy] = []
+            
+        group_dict[policy].append((result["capacity"] , result["hit_rate"]))
+
+    for policy , points in group_dict.items():
+        points.sort()
+        
+    return group_dict
+        
+def plot_curves(groups : dict[str , list[tuple[int , float]]] , result_path : Path) -> Path :
+
+    fig , ax = plt.subplots(figsize=(10 , 10))
+
+    labels = {
+        "lru" : "LRU",
+        "lfu" : "LFU",
+        "infinite" : "infinite demand-loaded cache -reference",
+        "belady" : "Belady - demand-fetch optimum"
+    }
+
+    for policy , list_value in groups.items():
+        
+        x = [ value[0] for value in list_value]
+        y = [ value[1] for value in list_value]
+
+        ax.plot(x , y , marker="o" , label=labels[policy])
+        
+    ax.set_xscale("log")
+    ax.set_xlabel("Cache size")
+    ax.set_ylabel("Hit Rate")
+    ax.set_title("P1 , July")
+    ax.grid()
+    ax.legend()
+
+    save_name = "headroom_P1.png"
+    save_path = result_path / save_name
+    
+    fig.savefig(save_path)
+
+    return save_path
+        
+    
+def main():
+
+    result_json , result_path = load_results()
+    filtered_results = select_batch(result_json)
+    check_batch(filtered_results)
+
+    groups = group_by_policy(filtered_results)
+    plot_curves(groups  , result_path)
+
+
+
+if __name__ == "__main__":
+    main()
