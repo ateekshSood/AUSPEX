@@ -1159,3 +1159,51 @@ trace shapes × six sizes (ties occur only among never-again keys, so the whole
 H/M string is tie-break independent). Test 8: misses(Belady) ≤ LRU, LFU under
 full-sequence counting. Test 9's Belady half: infinite ≥ Belady, and equal
 once capacity ≥ distinct keys. 9 new, suite **85 passed**.
+
+**D063 — libCacheSim added as an external dependency (hard rule 4, Ateeksh's
+OK 2026-09-30).** Why: PLAN §5.4 — an independent, published simulator must
+reproduce our LRU hit counts *exactly* at all five sizes, so no one can say
+the baseline was crippled. Scope: a build tool only — cloned and compiled
+**outside the repo** (`~/tools/libCacheSim`), never imported by `auspex`, no
+change to `pyproject.toml`; the only thing in the repo is the exporter and
+the evidence file `results/libcachesim_crosscheck.md`. System packages it
+needs that were missing: cmake, glib (dev), zstd (dev) — installed via its
+own `scripts/install_dependency.sh`. Alternative: skip the cross-check (PLAN
+says it is the credibility purchase — no).
+*Correction after the install ran:* the script did more than "cmake, glib,
+zstd". It put CMake 3.31 in `~/software/cmake` (PATH line appended to
+`~/.bashrc`), and installed system-wide into `/usr/local`: zstd **1.5.0**
+(alongside Ubuntu's 1.5.5), XGBoost 3.5 and LightGBM (for libCacheSim's
+learned policies — unused by us), plus apt packages (glib dev, gperftools,
+ninja, xxhash). None touch the project env. Noted so a later "why is there
+an old zstd in /usr/local" has an answer.
+Final results batch at 2695fb3 is clean: 20 JSONs, no -dirty.
+
+**D064 — LRU cross-check vs libCacheSim: EXACT match at all five sizes.**
+Setup (PLAN §5.4): `harness/export_libcachesim.py` (Ateeksh's) writes
+`data/processed/Jul95.csv` (`time,ids`, 1,671,535 rows) straight from
+`trace_loading` — the same arrays `policy_loop` replays, so order can't
+diverge. cachesim run with `--ignore-obj-size 1`, `-t "time-col=1,
+obj-id-col=2, obj-id-is-num=true, delimiter=,, has-header=true"`; its log
+confirms `num_warmup_req 0` and no admission algorithm. Ours: LRU with every
+request counted (no P1 mask). Misses, ours = libCacheSim:
+100 → 611,562 · 500 → 197,494 · 1000 → 76,602 · 5000 → 7,754 · 10000 → 7,207
+(10k = July's 7,207 distinct URLs: compulsory misses only).
+**Local patch to the tool (Claude, Ateeksh's OK):** cachesim printed only
+`miss ratio %.4lf` (≈167-request resolution on 1.67M — not "exact"), so
+`libCacheSim/bin/cachesim/main.c` printf now also prints `%lld miss`
+(`result[i].n_miss`, already computed). Print-only; no simulation code touched.
+Raw output: `results/libcachesim/Jul95_lru_exact` (ratio-only first run kept
+as `Jul95_lru.cachesim`). cachesim writes to ./result/ unless `-o` is given.
+
+**D065 — LFU also matches libCacheSim exactly; evidence file written.**
+LFU misses, ours = libCacheSim (every request counted): 100 → 640,769 ·
+500 → 262,978 · 1000 → 111,748 · 5000 → 7,539 · 10000 → 7,207. Possible
+because libCacheSim's `LFU.c` is the D056 variant (insert at 1, no ghost
+count, freq-buckets + min_freq, bump appends to the new bucket's tail, evict
+the min bucket's head — "FIFO within a frequency" = LRU among ties since every
+hit re-appends). Belady not cross-checked against libCacheSim: relying on the
+hand-verified + brute-force-reference tests (D062), as §5.3 permits.
+`results/libcachesim_crosscheck.md` written by Claude at Ateeksh's request.
+Open: our-side full-count numbers came from a one-off command; a committed
+no-warmup mode / make target would make them one-command reproducible.
