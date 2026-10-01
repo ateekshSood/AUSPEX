@@ -14,6 +14,8 @@ from auspex.policies.infinite import Infinite
 from auspex.policies.lfu import LFU
 from auspex.policies.lru import LRU
 
+POLICY_ARR = [LRU , LFU , Infinite , Belady]
+SIZE_ARR = [100 , 500 , 1000 , 5000 , 10000]
 
 def trace_loading(trace_name : str) -> dict:
 
@@ -89,11 +91,9 @@ def connector(trace_name : str):
     
     table_print_list = []
 
-    policy_arr = [LRU , LFU , Infinite , Belady]
-
-    for policy in policy_arr:
+    for policy in POLICY_ARR:
     
-        for size in [100 , 500 , 1000 , 5000 , 10000]:
+        for size in SIZE_ARR:
 
             if policy.name == "belady":
                 current_policy = policy(size ,ids_numpy )
