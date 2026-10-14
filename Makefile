@@ -14,6 +14,9 @@ baselines:
 stats:
 	uv run python -m auspex.stats -j -a
 
+plots:
+	uv run python -m auspex.plots.curves
+
 test:
 	uv run pytest -q
 

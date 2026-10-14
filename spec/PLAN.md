@@ -501,10 +501,10 @@ Do the same for LFU (expect approximate match only if their LFU variant matches 
 
 ### Acceptance — Stage 2
 
-- [ ] LFU, Belady, infinite implemented; Belady property test green on all traces/sizes.
-- [ ] LRU hit counts match libCacheSim at all five sizes (evidence: `results/libcachesim_crosscheck.md` with both numbers side by side).
-- [ ] Four-curve plot in `results/`; headroom numbers written into README.
-- [ ] Go/no-go decision recorded in `decisions.md`.
+- [x] LFU, Belady, infinite implemented; Belady property test green on all traces/sizes.
+- [x] LRU hit counts match libCacheSim at all five sizes (evidence: `results/libcachesim_crosscheck.md` with both numbers side by side).
+- [x] Four-curve plot in `results/`; headroom numbers written into README.
+- [x] Go/no-go decision recorded in `decisions.md`.
 
 ---
 
