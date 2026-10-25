@@ -1240,3 +1240,23 @@ WE WOULD ALSO KEEP 1000 CACHE SIZE WE NOTICE A AROUND 2 IDK THE EXACT NUMBER PLS
 WE WOULD USE 1000 TO SEE HOW WOULD OUR PREFETCHER DO WHEN THERE IS NOT ENOUGH GAP 
 UWU
 I HOPE I GET A JOB 
+
+## Session 12 — 2026-10-12 → 10-22 · Stage 3 opened (PLAN §6), oracle-prefetch bound first
+
+Discussion: "isn't the oracle just Belady?" → no. Both read the future, but
+Belady uses it to choose what to *evict* (demand-fetch only, so every first
+reference still misses); the oracle prefetcher uses it to choose what to
+*fetch early* (eviction stays plain LRU/FIFO). Purpose of the oracle: oracle −
+LRU = the go/no-go (§5.5 step 2); ours − oracle = model quality. Beating
+Belady is a side result, not the goal. "Oracle" = CS term of art for a
+baseline given perfect information (sense 2 in the naming memo, kept).
+Architecture idea (Ateeksh's): split *predictor* (oracle now, Markov later)
+from *cache machinery* (segments, pending set, race rules) so the machinery is
+tested once and the predictor is swapped. Matches §5.2's intent.
+Mistake caught: Ateeksh's first rule for the pending race was "late prefetch
+still lands in the cache and the later hit counts as prefetch_hit". Wrong:
+the demand copy alone would have produced that hit (plain-LRU counterfactual),
+so it books fake credit, inflates precision, and puts the key in two segments.
+Pinned rule (§6.4): miss, pending_missed += 1, demand fetch → demand segment,
+prefetch marked obsolete — still a backend fetch, result discarded on arrival.
+Gap-0 transitions always lose the race at L = 200 ms (strict ready_at < ts).
