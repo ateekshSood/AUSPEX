@@ -53,7 +53,7 @@ PLAN.md is the committed authority document; a selective rename is a large
 diff to it. Alternative: leave PLAN.md as historical text and let CLAUDE.md
 carry the ORACLE→AUSPEX mapping. Awaiting Ateeksh's call.
 
-**Q002 — Policy names `auspex1` / `auspex2`? — OPEN.**
+**Q002 — Policy names `auspex1` / `auspex2`? — RESOLVED 2026-10-25 → `markov1` / `markov2` (see D068).**
 Proposed: rename `oracle1`/`oracle2` → `auspex1`/`auspex2`, leaving
 `nextoracle` and "oracle-prefetch bound" untouched, so "our policy" and "the
 oracle bound" stay visibly distinct. Awaiting confirmation. These strings land
@@ -1260,3 +1260,23 @@ so it books fake credit, inflates precision, and puts the key in two segments.
 Pinned rule (§6.4): miss, pending_missed += 1, demand fetch → demand segment,
 prefetch marked obsolete — still a backend fetch, result discarded on arrival.
 Gap-0 transitions always lose the race at L = 200 ms (strict ready_at < ts).
+
+**D067 — oracle predictor: `next_in_session` built in the oracle's own `__init__`.**
+Decision (Ateeksh's): same as Belady. Harness passes ids + session ids to
+the constructor; one backward pass with dict session → most recent URL seen
+(read, then overwrite; -1 = last request of its session); row index tracked
+Belady-style (`curr` saved in `get`, `observe` reads `curr`, not the counter,
+which is already i+1 there). Alternatives: harness builds the array and passes
+it in (rejected: future-reading stays inside the predictor, so swapping in
+Markov leaves the cache machinery untouched). Cost: a second special case next
+to `policy.name == "belady"` in `connector`. Hand-checked on a 6-row trace:
+next = [B, Y, C, X, -1, -1].
+
+**D068 — policy names: `oracle` (bound), `markov1` / `markov2` (ours). Closes Q002.**
+Decision (Ateeksh's): the oracle-prefetch bound is `policies/oracle.py`,
+`name = "oracle"`; the learned first/second-order policies are `markov1` /
+`markov2` (matches the `results/markov1.pkl` artifact name in PLAN §6.1).
+Alternatives: PLAN's `nextoracle` + `oracle1`/`oracle2` (rejected: "oracle1"
+reads as a variant of the ceiling); `auspex1`/`auspex2` (rejected: names the
+project, not the method). Where PLAN.md says `nextoracle` read `oracle`; where
+it says `oracle1`/`oracle2` read `markov1`/`markov2`. PLAN text not edited (Q001).
